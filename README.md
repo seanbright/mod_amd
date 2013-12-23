@@ -1,0 +1,5 @@
+Asterisk app_amd for FreeSWITCH
+===============================
+
+This is an implementation of Asterisk's answering machine detection (voice
+activity detection) for FreeSWITCH.
