@@ -391,14 +391,10 @@ SWITCH_STANDARD_API(amd_api_main)
 	}
 
 	amd_info = (amd_session_info_t *) switch_core_session_alloc(amd_session, sizeof(amd_session_info_t));
+	memset(amd_info, 0, sizeof(amd_session_info_t));
 	amd_info->session = amd_session;
-	amd_info->analysis_time = 0;
-	amd_info->total_silence = 0;
-	amd_info->total_voice = 0;
 	amd_info->in_initial_silence = 1;
-	amd_info->in_greeting = 0;
 	amd_info->state = IN_WORD;
-	amd_info->word_count = 0;
 
 	status = switch_core_media_bug_add(amd_session, "amd", NULL, amd_callback, amd_info, 0, SMBF_READ_REPLACE, &bug);
 
