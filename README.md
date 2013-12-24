@@ -15,10 +15,10 @@ Building
 --------
 
 To build this module, all you need to do is type `make`, but because it relies
-on pkg-config and FreeSWITCH, you need to point pkg-config to where FreeSWITCH
-is installed:
+on `pkg-config` and FreeSWITCH, you need to point `pkg-config` to where
+FreeSWITCH is installed before building:
 
-```$ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig/
-
-$ make
+```
+host$ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig/
+host$ make
 ```
