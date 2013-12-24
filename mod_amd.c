@@ -9,6 +9,7 @@ SWITCH_STANDARD_API(amd_api_main);
 SWITCH_MODULE_LOAD_FUNCTION(mod_amd_load);
 
 SWITCH_MODULE_DEFINITION(mod_amd, mod_amd_load, mod_amd_shutdown, NULL);
+SWITCH_STANDARD_APP(amd_start_function);
 
 static struct {
 	int initial_silence;
@@ -313,11 +314,21 @@ static switch_status_t do_config(switch_bool_t reload)
 
 SWITCH_MODULE_LOAD_FUNCTION(mod_amd_load)
 {
+	switch_application_interface_t *app_interface;
 	switch_api_interface_t *api_interface;
 
 	*module_interface = switch_loadable_module_create_module_interface(pool, modname);
 
 	do_config(SWITCH_FALSE);
+
+	SWITCH_ADD_APP(
+		app_interface,
+		"amd",
+		"Voice activity detection",
+		"Asterisk's AMD",
+		amd_start_function,
+		"[start] [stop]",
+		SAF_NONE);
 
 	SWITCH_ADD_API(api_interface, "amd", "Detect voice activity", amd_api_main, AMD_SYNTAX);
 
@@ -329,6 +340,48 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_amd_shutdown)
 	switch_xml_config_cleanup(instructions);
 
 	return SWITCH_STATUS_SUCCESS;
+}
+
+SWITCH_STANDARD_APP(amd_start_function)
+{
+	switch_media_bug_t *bug;
+	amd_session_info_t *amd_info;
+	switch_channel_t *channel;
+	switch_status_t status;
+
+	if (!session) {
+		return;
+	}
+
+	channel = switch_core_session_get_channel(session);
+
+	bug = (switch_media_bug_t *) switch_channel_get_private(channel, "_amd_");
+
+	if (bug) {
+		if (strncasecmp(data, "stop", sizeof("stop") - 1) == 0) {
+			switch_channel_set_private(channel, "_amd_", NULL);
+			switch_core_media_bug_remove(session, &bug);
+			return;
+		}
+
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_WARNING, "Already running on channel.\n");
+		return;
+	}
+
+	amd_info = (amd_session_info_t *) switch_core_session_alloc(session, sizeof(amd_session_info_t));
+	memset(amd_info, 0, sizeof(amd_session_info_t));
+	amd_info->session = session;
+	amd_info->in_initial_silence = 1;
+	amd_info->state = IN_WORD;
+
+	status = switch_core_media_bug_add(session, "amd", NULL, amd_callback, amd_info, 0, SMBF_READ_REPLACE, &bug);
+
+	if (status != SWITCH_STATUS_SUCCESS) {
+		switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_ERROR, "Failure bugging stream\n");
+		return;
+	}
+
+	switch_channel_set_private(channel, "_amd_", bug);
 }
 
 SWITCH_STANDARD_API(amd_api_main)
