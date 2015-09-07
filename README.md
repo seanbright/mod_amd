@@ -22,3 +22,22 @@ FreeSWITCH is installed before building:
 host$ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig/
 host$ make
 ```
+
+Sample Configuration
+--------------------
+Just put a file like this in your freeswitch installation, in **conf/autoload_configs/amd.conf.xml**
+```xml
+<configuration name="amd.conf" description="mod_amd Configuration">
+  <settings>
+    <param name="silence_threshold" value="256"/>
+    <param name="maximum_word_length" value="5000"/>
+    <param name="maximum_number_of_words" value="3"/>
+    <param name="between_words_silence" value="50"/>
+    <param name="min_word_length" value="100"/>
+    <param name="total_analysis_time" value="5000"/>
+    <param name="after_greeting_silence" value="800"/>
+    <param name="greeting" value="1500"/>
+    <param name="initial_silence" value="2500"/>
+  </settings>
+</configuration>
+```
