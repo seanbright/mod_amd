@@ -352,6 +352,7 @@ SWITCH_STANDARD_APP(amd_start_function)
 		&raw_codec,
 		"L16",
 		NULL,
+		NULL,
 		read_impl.actual_samples_per_second,
 		read_impl.microseconds_per_packet / 1000,
 		1,
