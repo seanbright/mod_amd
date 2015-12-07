@@ -1,0 +1,10 @@
+
+    <extension name="test_amd" continue="false">
+      <condition field="destination_number" expression="^5555$">
+        <action application="answer"/>
+          <action application="amd"/>
+          <action application="playback" data="/usr/local/freeswitch/sounds/en/us/callie/voicemail/8000/vm-hello.wav"/>
+          <action application="info"/>
+          <action application="hangup"/>
+      </condition>
+    </extension>

@@ -219,7 +219,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 			globals.after_greeting_silence);
 
 		switch_channel_set_variable(vad->channel, "amd_result", "HUMAN");
-		switch_channel_set_variable(vad->channel, "amd_cause", "HUMAN");
+		switch_channel_set_variable(vad->channel, "amd_cause", "SILENCEAFTERGREETING");
 		return SWITCH_TRUE;
 	}
 
