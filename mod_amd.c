@@ -145,7 +145,7 @@ typedef enum {
 } amd_vad_state_t;
 
 typedef struct {
-	const switch_core_session_t *session;
+	switch_core_session_t *session;
 	switch_channel_t *channel;
 	amd_vad_state_t state;
 	uint32_t frame_ms;
@@ -157,6 +157,23 @@ typedef struct {
 	uint32_t in_initial_silence:1;
 	uint32_t in_greeting:1;
 } amd_vad_t;
+
+static void amd_fire_event(const char *result, const char *cause, switch_core_session_t *fs_s)
+{
+    switch_event_t      *event;
+    switch_event_t      *event_copy;
+
+    if ((switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, "amd")) != SWITCH_STATUS_SUCCESS)
+        return;
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "AMD-Result", result);
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "AMD-Cause", cause);
+    if ((switch_event_dup(&event_copy, event)) != SWITCH_STATUS_SUCCESS)
+        return;
+    switch_core_session_queue_event(fs_s, &event);
+    switch_event_fire(&event_copy);
+
+    return;
+}
 
 static amd_frame_classifier classify_frame(const switch_frame_t *f, const switch_codec_implementation_t *codec)
 {
@@ -207,6 +224,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "INITIALSILENCE");
+        amd_fire_event("MACHINE", "INITIALSILENCE", vad->session);
 		return SWITCH_TRUE;
 	}
 
@@ -220,6 +238,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 
 		switch_channel_set_variable(vad->channel, "amd_result", "HUMAN");
 		switch_channel_set_variable(vad->channel, "amd_cause", "HUMAN");
+        amd_fire_event("HUMAN", "HUMAN", vad->session);
 		return SWITCH_TRUE;
 	}
 
@@ -252,6 +271,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "MAXWORDLENGTH");
+        amd_fire_event("MACHINE", "MAXWORDLENGTH", vad->session);
 		return SWITCH_TRUE;
 	}
 
@@ -265,6 +285,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "MAXWORDS");
+        amd_fire_event("MACHINE", "MAXWORDS", vad->session);
 		return SWITCH_TRUE;
 	}
 
@@ -278,6 +299,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "LONGGREETING");
+        amd_fire_event("MACHINE", "LONGGREETING", vad->session);
 		return SWITCH_TRUE;
 	}
 
