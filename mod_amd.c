@@ -167,6 +167,7 @@ static void amd_fire_event(const char *result, const char *cause, switch_core_se
         return;
     switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "AMD-Result", result);
     switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "AMD-Cause", cause);
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Unique-ID", switch_core_session_get_uuid(fs_s));
     if ((switch_event_dup(&event_copy, event)) != SWITCH_STATUS_SUCCESS)
         return;
     switch_core_session_queue_event(fs_s, &event);
@@ -412,6 +413,7 @@ SWITCH_STANDARD_APP(amd_start_function)
 
 				switch_channel_set_variable(channel, "amd_result", "NOTSURE");
 				switch_channel_set_variable(channel, "amd_cause", "TOOLONG");
+                amd_fire_event("NOTSURE", "TOOLONG", vad.session);
 				break;
 			}
 		}
