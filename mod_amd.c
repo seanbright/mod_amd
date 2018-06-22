@@ -19,7 +19,18 @@ static struct {
 	uint32_t silence_threshold;
 	uint32_t maximum_word_length;
 } globals;
-
+enum amd_event
+{
+    AMD_EVENT_HUMAN = 0,
+    AMD_EVENT_MACHINE = 1
+};
+/* This array MUST be NULL terminated! */
+const char* amd_events_str[] = {
+    [AMD_EVENT_HUMAN] =             "amd::human",
+    [AMD_EVENT_MACHINE] =    "amd::machine",
+    NULL                                            /* MUST be last and always here */
+};
+static void amd_fire_event(enum amd_event type, switch_core_session_t *fs_s);
 static switch_xml_config_item_t instructions[] = {
 	SWITCH_CONFIG_ITEM(
 		"initial_silence",
@@ -95,7 +106,40 @@ static switch_xml_config_item_t instructions[] = {
 
 	SWITCH_CONFIG_ITEM_END()
 };
+static void amd_fire_event(enum amd_event type, switch_core_session_t *fs_s) {
 
+	switch_event_t      *event;
+	switch_event_t      *event_copy;
+	switch_status_t     status;
+	status = switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, amd_events_str[type]);
+    if (status != SWITCH_STATUS_SUCCESS) {
+        return;
+    }
+
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Unique-ID", switch_core_session_get_uuid(fs_s));
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Call-command", "amd");
+
+    switch (type)
+    {
+        case AMD_EVENT_HUMAN:
+            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Amd-Status", "HUMAN");
+            break;
+
+        case AMD_EVENT_MACHINE:
+            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Amd-Status", "MACHINE");
+            break;
+
+        default:
+            switch_event_destroy(&event);
+            return;
+    }
+    if ((switch_event_dup(&event_copy, event)) != SWITCH_STATUS_SUCCESS) {
+        return;
+    }
+    switch_core_session_queue_event(fs_s, &event);
+    switch_event_fire(&event_copy);
+    return;
+}
 static switch_status_t do_config(switch_bool_t reload)
 {
 	memset(&globals, 0, sizeof(globals));
@@ -181,7 +225,7 @@ static amd_frame_classifier classify_frame(const switch_frame_t *f, const switch
 	return SILENCE;
 }
 
-static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame_t *f)
+static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame_t *f, switch_core_session_t *fs_s)
 {
 	vad->silence_duration += vad->frame_ms;
 
@@ -204,7 +248,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 			"AMD: MACHINE (silence_duration: %d, initial_silence: %d)\n",
 			vad->silence_duration,
 			globals.initial_silence);
-
+		amd_fire_event(AMD_EVENT_MACHINE, fs_s);
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "INITIALSILENCE");
 		return SWITCH_TRUE;
@@ -217,7 +261,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 			"AMD: HUMAN (silence_duration: %d, after_greeting_silence: %d)\n",
 			vad->silence_duration,
 			globals.after_greeting_silence);
-
+		amd_fire_event(AMD_EVENT_HUMAN, fs_s);
 		switch_channel_set_variable(vad->channel, "amd_result", "HUMAN");
 		switch_channel_set_variable(vad->channel, "amd_cause", "HUMAN");
 		return SWITCH_TRUE;
@@ -401,7 +445,7 @@ SWITCH_STANDARD_APP(amd_start_function)
 				SWITCH_LOG_DEBUG,
 				"AMD: Silence\n");
 
-			if (amd_handle_silence_frame(&vad, read_frame)) {
+			if (amd_handle_silence_frame(&vad, read_frame, session)) {
 				complete = SWITCH_TRUE;
 			}
 			break;
