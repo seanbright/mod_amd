@@ -22,12 +22,14 @@ static struct {
 enum amd_event
 {
     AMD_EVENT_HUMAN = 0,
-    AMD_EVENT_MACHINE = 1
+    AMD_EVENT_MACHINE = 1,
+    AMD_EVENT_NOTSURE = 2
 };
 /* This array MUST be NULL terminated! */
 const char* amd_events_str[] = {
     [AMD_EVENT_HUMAN] =             "amd::human",
     [AMD_EVENT_MACHINE] =    "amd::machine",
+    [AMD_EVENT_NOTSURE] =    "amd::notsure",
     NULL                                            /* MUST be last and always here */
 };
 static void amd_fire_event(enum amd_event type, switch_core_session_t *fs_s);
@@ -127,6 +129,9 @@ static void amd_fire_event(enum amd_event type, switch_core_session_t *fs_s) {
 
         case AMD_EVENT_MACHINE:
             switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Amd-Status", "MACHINE");
+            break;
+        case AMD_EVENT_NOTSURE:
+            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Amd-Status", "NOTSURE");
             break;
 
         default:
@@ -270,7 +275,7 @@ static switch_bool_t amd_handle_silence_frame(amd_vad_t *vad, const switch_frame
 	return SWITCH_FALSE;
 }
 
-static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_t *f)
+static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_t *f, switch_core_session_t *fs_s)
 {
 	vad->voice_duration += vad->frame_ms;
 
@@ -293,7 +298,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 			"AMD: MACHINE (voice_duration: %d, maximum_word_length: %d)\n",
 			vad->voice_duration,
 			globals.maximum_word_length);
-
+		amd_fire_event(AMD_EVENT_MACHINE, fs_s);
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "MAXWORDLENGTH");
 		return SWITCH_TRUE;
@@ -306,7 +311,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 			"AMD: MACHINE (words: %d, maximum_number_of_words: %d)\n",
 			vad->words,
 			globals.maximum_number_of_words);
-
+		amd_fire_event(AMD_EVENT_MACHINE, fs_s);
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "MAXWORDS");
 		return SWITCH_TRUE;
@@ -319,7 +324,7 @@ static switch_bool_t amd_handle_voiced_frame(amd_vad_t *vad, const switch_frame_
 			"AMD: MACHINE (voice_duration: %d, greeting: %d)\n",
 			vad->voice_duration,
 			globals.greeting);
-
+		amd_fire_event(AMD_EVENT_MACHINE, fs_s);
 		switch_channel_set_variable(vad->channel, "amd_result", "MACHINE");
 		switch_channel_set_variable(vad->channel, "amd_cause", "LONGGREETING");
 		return SWITCH_TRUE;
@@ -431,7 +436,7 @@ SWITCH_STANDARD_APP(amd_start_function)
 			sample_count_limit -= raw_codec.implementation->samples_per_packet;
 			if (sample_count_limit <= 0) {
 				switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "AMD: Timeout\n");
-
+				amd_fire_event(AMD_EVENT_NOTSURE, session);
 				switch_channel_set_variable(channel, "amd_result", "NOTSURE");
 				switch_channel_set_variable(channel, "amd_cause", "TOOLONG");
 				break;
@@ -456,7 +461,7 @@ SWITCH_STANDARD_APP(amd_start_function)
 				SWITCH_LOG_DEBUG,
 				"AMD: Voiced\n");
 
-			if (amd_handle_voiced_frame(&vad, read_frame)) {
+			if (amd_handle_voiced_frame(&vad, read_frame, session)) {
 				complete = SWITCH_TRUE;
 			}
 			break;
