@@ -25,6 +25,7 @@ host$ make
 
 Sample Configuration
 --------------------
+
 Just put a file like this in your freeswitch installation, in **conf/autoload_configs/amd.conf.xml**
 ```xml
 <configuration name="amd.conf" description="mod_amd Configuration">
@@ -41,3 +42,46 @@ Just put a file like this in your freeswitch installation, in **conf/autoload_co
   </settings>
 </configuration>
 ```
+
+Variables
+---------
+
+After the AMD execution, the variable `amd_result` and `amd_cause` will be set.
+
+The variable `amd_result` will return one of the following results:
+
+- NOTSURE: take this value if total_analysis_time is over and decision could not be made
+- HUMAN: if a human is detected
+- MACHINE: if a human is detected
+
+
+The variable `amd_cause` will return one of the following results:
+
+- INITIALSILENCE (MACHINE)
+- SILENCEAFTERGREETING (HUMAN)
+- MAXWORDLENGTH (MACHINE)
+- MAXWORDS (MACHINE)
+- LONGGREETING (MACHINE)
+- TOOLONG (NOTSURE)
+
+
+Usage
+-----
+
+Set a Dialplan as follow:
+
+```xml
+    <extension name="amd_ext" continue="false">
+      <condition field="destination_number" expression="^5555$">
+        <action application="answer"/>
+          <action application="amd"/>
+          <action application="playback" data="/usr/local/freeswitch/sounds/en/us/callie/voicemail/8000/vm-hello.wav"/>
+          <action application="info"/>
+          <action application="hangup"/>
+      </condition>
+    </extension>
+```
+
+The originate a call that will bridge to the `amd_ext` dialplan:
+
+    originate {origination_caller_id_number='808111222',ignore_early_media=true,originate_timeout=45}sofia/gateway/mygateway/0044888888888 5555
