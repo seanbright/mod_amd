@@ -47,5 +47,5 @@ Just put a file like this in your freeswitch installation, in **conf/autoload_co
 Events
 ------
 
-The module fires the custom FreeSWITCH event (through the RabbitMQ transport) `amd`
-with the significant fields `AMD-Result` and `AMD-Cause`. `Unique-ID` to recognize FreeSWITCH instance.
+The module fires the custom FreeSWITCH event `amd` with the significant fields `AMD-Result` and `AMD-Cause`.
+`Unique-ID` to recognize FreeSWITCH instance.
