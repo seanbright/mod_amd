@@ -18,14 +18,16 @@ To build this module, all you need to do is type `make`, but because it relies
 on `pkg-config` and FreeSWITCH, you need to point `pkg-config` to where
 FreeSWITCH is installed before building:
 
-```
+```shell
 host$ export PKG_CONFIG_PATH=/usr/local/freeswitch/lib/pkgconfig/
 host$ make
 ```
 
 Sample Configuration
 --------------------
+
 Just put a file like this in your freeswitch installation, in **conf/autoload_configs/amd.conf.xml**
+
 ```xml
 <configuration name="amd.conf" description="mod_amd Configuration">
   <settings>
@@ -41,3 +43,9 @@ Just put a file like this in your freeswitch installation, in **conf/autoload_co
   </settings>
 </configuration>
 ```
+
+Events
+------
+
+The module fires the custom FreeSWITCH event (through the RabbitMQ transport) `amd`
+with the significant fields `AMD-Result` and `AMD-Cause`. `Unique-ID` to recognize FreeSWITCH instance.
